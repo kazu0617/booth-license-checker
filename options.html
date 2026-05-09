@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BOOTH License Checker - 設定</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans',
+        'Noto Sans JP', sans-serif;
+      font-size: 14px;
+      color: #1a1a1a;
+      background: #f7f7f8;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+    }
+
+    /* ── ヘッダー ── */
+    .page-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .page-header__logo {
+      width: 40px; height: 40px;
+      flex-shrink: 0;
+    }
+
+    .page-header h1 { font-size: 20px; font-weight: 700; }
+    .page-header p  { font-size: 13px; color: #666; margin-top: 2px; }
+
+    /* ── 有効/無効トグル ── */
+    .enable-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 24px;
+    }
+
+    .enable-row__label { font-weight: 600; }
+    .enable-row__desc  { font-size: 12px; color: #666; margin-top: 2px; }
+
+    .toggle {
+      position: relative;
+      width: 44px; height: 24px;
+      flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle__slider {
+      position: absolute; inset: 0;
+      background: #ccc; border-radius: 24px;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .toggle__slider::before {
+      content: '';
+      position: absolute;
+      width: 18px; height: 18px;
+      left: 3px; bottom: 3px;
+      background: #fff; border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle input:checked + .toggle__slider { background: #1a73e8; }
+    .toggle input:checked + .toggle__slider::before { transform: translateX(20px); }
+
+    /* ── 説明文 ── */
+    .section-desc {
+      font-size: 13px;
+      color: #555;
+      background: #e8f0fe;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    /* ── カテゴリブロック ── */
+    .category-block {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .category-block__title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #555;
+      padding: 10px 16px;
+      background: #f5f5f5;
+      border-bottom: 1px solid #e8e8e8;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── 条件ブロック ── */
+    .option-block {
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .option-block:last-child { border-bottom: none; }
+
+    .option-block__header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      background: #fafafa;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .option-block__header:hover { background: #f0f0f0; }
+
+    .condition-toggle {
+      width: 16px; height: 16px;
+      accent-color: #1a73e8;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .option-block__text { flex: 1; }
+    .option-block__label { font-weight: 600; font-size: 13px; display: block; }
+    .option-block__en    { font-size: 11px; color: #999; }
+
+    /* ── 選択肢行 ── */
+    .choice-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 16px 6px 42px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .choice-row:hover { background: #f5f8ff; }
+    .choice-row input[type="checkbox"] {
+      width: 14px; height: 14px;
+      accent-color: #1a73e8;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .choice-row__label { flex: 1; font-size: 13px; }
+    .choice-row__type {
+      font-size: 11px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .choice-row__type--permitted      { background: #f6ffed; color: #135200; }
+    .choice-row__type--conditional    { background: #fff7e6; color: #7d5a00; }
+    .choice-row__type--not-permitted  { background: #fff2f0; color: #a8071a; }
+    .choice-row__type--contact        { background: #e6f7ff; color: #0c4a6e; }
+    .choice-row__type--not-applicable { background: #f5f5f5; color: #555; }
+
+    /* 条項が無効の場合に選択肢行をグレーアウト */
+    .option-block--disabled .choice-row {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    /* ── フッターボタン ── */
+    .footer {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(247, 247, 248, 0.95);
+      backdrop-filter: blur(4px);
+      border-top: 1px solid #e0e0e0;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 8px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn--primary { background: #1a73e8; color: #fff; }
+    .btn--secondary { background: #fff; color: #555; border-color: #d0d0d0; }
+
+    .save-status {
+      font-size: 13px;
+      color: #52c41a;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .save-status.visible { opacity: 1; }
+
+    /* ── 権限セクション ── */
+    .perm-section {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+
+    .perm-section__title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #555;
+      padding: 10px 16px;
+      background: #f5f5f5;
+      border-bottom: 1px solid #e8e8e8;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .perm-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .perm-row:last-child { border-bottom: none; }
+
+    .perm-row__info { flex: 1; }
+    .perm-row__name { font-weight: 600; font-size: 13px; }
+    .perm-row__desc { font-size: 12px; color: #666; margin-top: 2px; }
+
+    .perm-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .perm-badge--granted   { background: #f6ffed; color: #135200; }
+    .perm-badge--missing   { background: #fff2f0; color: #a8071a; }
+
+    .btn--grant {
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid #1a73e8;
+      background: #e8f0fe;
+      color: #1a73e8;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: opacity 0.15s;
+    }
+    .btn--grant:hover { opacity: 0.8; }
+    .btn--grant:disabled { opacity: 0.4; cursor: default; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="page-header">
+      <img class="page-header__logo" src="icons/icon48.png" alt="">
+      <div>
+        <h1>BOOTH License Checker</h1>
+        <p>必要な VN3 許諾条件を設定します</p>
+      </div>
+    </div>
+
+    <div class="enable-row">
+      <div>
+        <div class="enable-row__label">拡張機能を有効にする</div>
+        <div class="enable-row__desc">無効にすると Booth.pm ページへの表示が停止します</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-enabled" checked>
+        <span class="toggle__slider"></span>
+      </label>
+    </div>
+
+    <div class="enable-row">
+      <div>
+        <div class="enable-row__label">VRChat タグがついている商品のみチェックする</div>
+        <div class="enable-row__desc">VRChat バッジがない商品ではチェックをスキップします</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-only-vrchat" checked>
+        <span class="toggle__slider"></span>
+      </label>
+    </div>
+
+    <div class="perm-section">
+      <div class="perm-section__title">外部サービスのアクセス権限</div>
+      <div class="perm-row" id="perm-row-gdrive">
+        <div class="perm-row__info">
+          <div class="perm-row__name">Google Drive / Google ドキュメント</div>
+          <div class="perm-row__desc">drive.google.com, docs.google.com のライセンス文書を取得するために必要</div>
+        </div>
+        <span class="perm-badge" id="perm-badge-gdrive">確認中…</span>
+        <button class="btn--grant" id="perm-btn-gdrive" disabled>権限を付与</button>
+      </div>
+      <div class="perm-row" id="perm-row-dropbox">
+        <div class="perm-row__info">
+          <div class="perm-row__name">Dropbox</div>
+          <div class="perm-row__desc">dropbox.com のライセンス文書を取得するために必要</div>
+        </div>
+        <span class="perm-badge" id="perm-badge-dropbox">確認中…</span>
+        <button class="btn--grant" id="perm-btn-dropbox" disabled>権限を付与</button>
+      </div>
+    </div>
+
+    <div class="section-desc">
+      各条件名の左のチェックボックスでチェック対象にする条件を有効にし、有効にした条件について<strong>受け入れ可能な選択肢</strong>にチェックを入れてください。<br>
+      解析結果が受け入れ可能な選択肢に含まれない場合、Booth.pm の商品ページに警告が表示されます。<br>
+      条件名の左のチェックボックスがオフの条件はチェック対象外になります。
+    </div>
+
+    <div id="options-container"></div>
+  </div>
+
+  <div class="footer">
+    <span class="save-status" id="save-status">保存しました ✓ 開いている Booth ページは再読み込みしてください</span>
+    <button class="btn btn--secondary" id="btn-reset">すべてリセット</button>
+    <button class="btn btn--primary" id="btn-save">保存</button>
+  </div>
+
+  <script src="vn3-options.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

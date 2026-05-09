@@ -1,0 +1,222 @@
+/* BOOTH License Checker - バナー & バッジ スタイル */
+
+#booth-license-checker-banner {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans',
+    'Noto Sans JP', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 16px 0 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* ── グレーバッジ（VN3 未検出） ───────────────────────────────────── */
+
+.vn3-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #d0d0d0;
+  background: #f5f5f5;
+  color: #555;
+}
+
+.vn3-badge--undetected {
+  border-color: #ccc;
+  background: #f8f8f8;
+}
+
+.vn3-badge__icon { font-size: 16px; flex-shrink: 0; }
+.vn3-badge__text { flex: 1; }
+
+/* ── バナー共通 ──────────────────────────────────────────────────── */
+
+.vn3-banner { border: 1px solid transparent; }
+
+.vn3-banner__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.vn3-banner__icon { font-size: 18px; flex-shrink: 0; }
+
+.vn3-banner__title {
+  flex: 1;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.vn3-banner__body {
+  padding: 0 14px 12px;
+}
+
+.vn3-banner__footer {
+  padding: 8px 14px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  font-size: 13px;
+}
+
+/* ── ローディング ─────────────────────────────────────────────────── */
+
+.vn3-banner--loading {
+  background: #f5f5f5;
+  border-color: #ddd;
+  color: #555;
+}
+
+/* ── 警告（取得失敗・リンクなし） ──────────────────────────────────── */
+
+.vn3-banner--warn {
+  background: #fffbe6;
+  border-color: #ffe58f;
+  color: #7d5a00;
+}
+
+.vn3-banner--warn .vn3-banner__footer {
+  border-color: rgba(255, 229, 143, 0.6);
+}
+
+/* ── エラー（必要条件不足） ─────────────────────────────────────────── */
+
+.vn3-banner--error {
+  background: #fff2f0;
+  border-color: #ffccc7;
+  color: #a8071a;
+}
+
+.vn3-banner--error .vn3-banner__footer {
+  border-color: rgba(255, 204, 199, 0.6);
+}
+
+/* ── OK（全条件確認済み） ────────────────────────────────────────── */
+
+.vn3-banner--ok {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+  color: #135200;
+}
+
+.vn3-banner--ok .vn3-banner__footer {
+  border-color: rgba(183, 235, 143, 0.6);
+}
+
+/* ── 条件行 ─────────────────────────────────────────────────────── */
+
+.vn3-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.vn3-row__icon {
+  width: 18px;
+  text-align: center;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.vn3-row__label { flex: 1; }
+
+.vn3-row__status {
+  font-size: 12px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.vn3-row--permitted .vn3-row__icon  { color: #52c41a; }
+.vn3-row--permitted .vn3-row__status { background: #f6ffed; color: #135200; }
+
+.vn3-row--denied .vn3-row__icon   { color: #ff4d4f; }
+.vn3-row--denied .vn3-row__status  { background: #fff2f0; color: #a8071a; }
+
+.vn3-row--conditional .vn3-row__icon   { color: #faad14; }
+.vn3-row--conditional .vn3-row__status { background: #fff7e6; color: #7d5a00; }
+
+.vn3-row--na .vn3-row__icon    { color: #aaa; }
+.vn3-row--na .vn3-row__status  { background: #f5f5f5; color: #555; }
+
+.vn3-row--contact .vn3-row__icon   { color: #1890ff; }
+.vn3-row--contact .vn3-row__status { background: #e6f7ff; color: #0c4a6e; }
+
+.vn3-row--unknown .vn3-row__icon  { color: #faad14; }
+.vn3-row--unknown .vn3-row__status { background: #fffbe6; color: #7d5a00; }
+
+/* ── 特記事項 Info ボックス ──────────────────────────────────────── */
+
+.vn3-info-box {
+  display: flex;
+  gap: 8px;
+  margin: 0 14px 12px;
+  padding: 8px 12px;
+  border: 1px solid #91caff;
+  border-radius: 6px;
+  background: #e6f4ff;
+  color: #003eb3;
+  font-size: 13px;
+}
+
+.vn3-info-box__icon { flex-shrink: 0; font-size: 16px; line-height: 1.4; }
+
+.vn3-info-box__body { flex: 1; }
+
+.vn3-info-box__title { display: block; font-weight: 600; margin-bottom: 2px; }
+
+.vn3-info-box__text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── 免責注記 ────────────────────────────────────────────────────── */
+
+.vn3-disclaimer {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+/* ── リンク ─────────────────────────────────────────────────────── */
+
+.vn3-link {
+  color: inherit;
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+.vn3-link:hover { opacity: 0.75; }
+
+.vn3-link-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-decoration: underline;
+}
+.vn3-link-btn:hover { opacity: 0.75; }
+
+/* ── 閉じるボタン ────────────────────────────────────────────────── */
+
+.vn3-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: inherit;
+  opacity: 0.6;
+  padding: 2px 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.vn3-close:hover { opacity: 1; background: rgba(0, 0, 0, 0.06); }

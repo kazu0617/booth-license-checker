@@ -1,0 +1,58 @@
+{
+  "manifest_version": 3,
+  "name": "BOOTH License Checker",
+  "version": "0.1.0",
+  "description": "BOOTH の商品ページで VN3 ライセンス条件を自動チェックして警告を表示します",
+  "permissions": ["storage", "scripting", "tabs", "activeTab"],
+  "host_permissions": [
+    "https://booth.pm/*",
+    "https://*.booth.pm/*"
+  ],
+  "optional_host_permissions": [
+    "https://drive.google.com/*",
+    "https://drive.usercontent.google.com/*",
+    "https://docs.google.com/*",
+    "https://www.dropbox.com/*",
+    "https://dl.dropboxusercontent.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://booth.pm/*/items/*",
+        "https://booth.pm/items/*",
+        "https://*.booth.pm/items/*"
+      ],
+      "js": [
+        "lib/pdf.min.js",
+        "lib/link-extractor.js",
+        "vn3-options.js",
+        "content.js"
+      ],
+      "css": ["warning.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["lib/pdf.worker.min.js"],
+      "matches": ["https://booth.pm/*", "https://*.booth.pm/*"]
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
