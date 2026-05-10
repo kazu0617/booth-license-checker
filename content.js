@@ -279,10 +279,16 @@
   }
 
   function extractSpecialNotes(text) {
-    // 最後の出現位置を使う（目次など前半の「特記事項」という語を誤拾いしないため）
-    const idx = text.lastIndexOf('特記事項');
-    if (idx === -1) return null;
+    // 個別条件の検出と同様に、前後が非空白文字でない（見出しとして孤立している）
+    // 「特記事項」のみを検出する。本文中に「特記事項」が含まれる場合の誤拾いを防ぐ。
+    const headingRe = /(?<!\S)特記事項(?!\S)/g;
+    let headingMatch, lastHeadingMatch;
+    while ((headingMatch = headingRe.exec(text)) !== null) {
+      lastHeadingMatch = headingMatch;
+    }
+    if (!lastHeadingMatch) return null;
 
+    const idx = lastHeadingMatch.index;
     const afterHeading = text.slice(idx + 4).trim();
 
     // pdf.js はページ境界でスペースを挿入するため、空白除去後に終端を検索し
