@@ -313,8 +313,8 @@
       content = afterHeading;
     }
 
-    // 末尾に節番号 ("4." など) が残る場合は除去する
-    const trimmed = cleanPdfText(content.trim().replace(/\s*\d+[.．]\s*$/, '').trim());
+    // 末尾に節番号 ("4." / "４．" など、半角・全角を問わず) が残る場合は除去する
+    const trimmed = cleanPdfText(content.trim().replace(/\s*[\d０-９]+[.．]\s*$/, '').trim());
     if (!trimmed || /^[\s　]*なし[\s　]*$/.test(trimmed)) return null;
     return trimmed;
   }
