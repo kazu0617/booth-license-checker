@@ -242,8 +242,15 @@
     const footerInfo = detectVN3Footer(text);
 
     // 個別条件セクション以降を検索対象にする
-    const sectionIdx = text.indexOf('個別条件');
-    const searchText = sectionIdx >= 0 ? text.slice(sectionIdx) : text;
+    // 「個別条件」は基本条項・個別条件双方の文面中に出現するが、見出しとしての「個別条件」は
+    // pdf.js のアイテム結合により前後が空白で囲まれた形で現れる（文中では隣接する日本語文字がある）
+    // 最後の一致を使うことで目次など前半の見出し相当の出現も除外する
+    const headingRe = /(?<!\S)個別条件(?!\S)/g;
+    let headingMatch, lastHeadingMatch;
+    while ((headingMatch = headingRe.exec(text)) !== null) {
+      lastHeadingMatch = headingMatch;
+    }
+    const searchText = lastHeadingMatch ? text.slice(lastHeadingMatch.index) : text;
 
     // [A-W]. パターンでオプションセクションの境界を検出
     // VN3 文書の個別条件は「A. タイトル\n選択値」の形式
@@ -274,7 +281,7 @@
       isGeneratorDoc: footerInfo.found,
       specVersion: footerInfo.specVersion,
       genVersion: footerInfo.genVersion,
-      specialNotes: extractSpecialNotes(text),
+      specialNotes: extractSpecialNotes(searchText),
     };
   }
 
