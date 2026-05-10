@@ -54,7 +54,6 @@
   let lastError = null;
 
   let bestMatchCount = -1;
-  let driveDownloadUnavailable = false;
 
   for (const url of expandedLinks) {
     try {
@@ -81,7 +80,6 @@
         if (!usedUrl) usedUrl = url;
       }
     } catch (e) {
-      if (e.message === 'DRIVE_DOWNLOAD_UNAVAILABLE') driveDownloadUnavailable = true;
       lastError = e;
     }
   }
@@ -95,11 +93,6 @@
 
   if (pdfIsImageBased) {
     showBanner({ status: 'image_pdf', links: licenseLinks, pdfUrl: usedUrl });
-    return;
-  }
-
-  if (driveDownloadUnavailable) {
-    showBanner({ status: 'drive_unavailable', links: licenseLinks });
     return;
   }
 
@@ -476,22 +469,6 @@
         </div>
         <div class="vn3-banner__body">
           <p>このライセンス文書はテキストを含まない画像形式の PDF です。内容を手動でご確認ください。${pdfLinkHtml ? ' ' + pdfLinkHtml : ''}</p>
-        </div>
-      `;
-    } else if (status === 'drive_unavailable') {
-      banner.className = 'vn3-banner vn3-banner--warn';
-      const linksHtml = links.map(l =>
-        `<a class="vn3-link" href="${escapeHtml(l)}" target="_blank" rel="noopener">${escapeHtml(shortenUrl(l))} ↗</a>`
-      ).join('<br>');
-      banner.innerHTML = `
-        <div class="vn3-banner__header">
-          <span class="vn3-banner__icon">⚠️</span>
-          <span class="vn3-banner__title">BOOTH License Checker: ライセンス文書をダウンロードできませんでした</span>
-          <button class="vn3-close" aria-label="閉じる">✕</button>
-        </div>
-        <div class="vn3-banner__body">
-          <p>Google Drive のダウンロード制限またはアクセス権限の設定により、ファイルを自動取得できませんでした。下記リンクから直接ご確認ください。</p>
-          <p>${linksHtml}</p>
         </div>
       `;
     } else if (status === 'done') {

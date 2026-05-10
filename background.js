@@ -61,7 +61,7 @@ async function fetchPdf(originalUrl) {
     }
     const retryType = retryResponse.headers.get('content-type') || '';
     if (retryType.includes('text/html')) {
-      throw new Error('リトライ後も HTML が返されました。認証が必要な URL の可能性があります。');
+      throw new Error('DRIVE_DOWNLOAD_UNAVAILABLE');
     }
     return await readPdfArray(retryResponse, retryUrl);
   }
