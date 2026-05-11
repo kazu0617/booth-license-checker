@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BOOTH License Checker",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "BOOTH の商品ページで VN3 ライセンス条件を自動チェックして警告を表示します",
   "permissions": ["storage", "scripting", "tabs", "activeTab"],
   "host_permissions": [
@@ -35,7 +35,6 @@
         "https://*.booth.pm/items/*"
       ],
       "js": [
-        "lib/pdf.min.js",
         "lib/link-extractor.js",
         "vn3-options.js",
         "content.js"
@@ -46,7 +45,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["lib/pdf.worker.min.js"],
+      "resources": ["lib/pdf.min.mjs", "lib/pdf.worker.min.mjs"],
       "matches": ["https://booth.pm/*", "https://*.booth.pm/*"]
     }
   ],

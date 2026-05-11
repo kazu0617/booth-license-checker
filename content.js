@@ -189,16 +189,14 @@
   }
 
   // ════════════════════════════════════════════════════════════════════
-  // PDF テキスト抽出（pdf.js v3 UMD）
+  // PDF テキスト抽出（pdf.js v5 ESM）
   // ════════════════════════════════════════════════════════════════════
 
   async function extractTextFromPdf(uint8array) {
-    // pdf.js の Worker は web_accessible_resources で公開済み
-    if (typeof pdfjsLib === 'undefined') throw new Error('pdf.js が読み込まれていません');
+    const { getDocument, GlobalWorkerOptions } = await import(chrome.runtime.getURL('lib/pdf.min.mjs'));
+    GlobalWorkerOptions.workerSrc = chrome.runtime.getURL('lib/pdf.worker.min.mjs');
 
-    pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL('lib/pdf.worker.min.js');
-
-    const loadingTask = pdfjsLib.getDocument({ data: uint8array });
+    const loadingTask = getDocument({ data: uint8array, isEvalSupported: false });
     const pdf = await loadingTask.promise;
     try {
       let fullText = '';
