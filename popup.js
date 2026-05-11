@@ -79,3 +79,44 @@ function setStatus(type, text) {
   statusDot.className = `status__dot status__dot--${type}`;
   statusText.textContent = text;
 }
+
+// ── Viewer 連携の状態を表示 ─────────────────────────────────────────
+(async () => {
+  const settings = await chrome.storage.sync.get({ viewerEnabled: false, viewerUrl: '', viewerApiKey: '' });
+  if (!settings.viewerEnabled) return;
+
+  const row = document.getElementById('viewer-status-row');
+  const dot = document.getElementById('viewer-status-dot');
+  const txt = document.getElementById('viewer-status-text');
+  row.style.display = 'block';
+
+  function setVStatus(type, text) {
+    dot.className = `status__dot status__dot--${type}`;
+    txt.textContent = text;
+  }
+
+  if (!settings.viewerUrl || !settings.viewerApiKey) {
+    setVStatus('warn', '未設定 (URL or API キー)');
+    return;
+  }
+
+  try {
+    const url = settings.viewerUrl.replace(/\/+$/, '');
+    let originGranted = true;
+    try {
+      const u = new URL(url);
+      if (u.hostname === '127.0.0.1' || u.hostname === 'localhost') {
+        originGranted = await chrome.permissions.contains({ origins: [`${u.protocol}//${u.hostname}/*`] });
+      }
+    } catch { originGranted = false; }
+    if (!originGranted) {
+      setVStatus('error', '権限未付与');
+      return;
+    }
+    const res = await fetch(`${url}/api/health`);
+    if (res.ok) setVStatus('ok', '接続中');
+    else setVStatus('error', `HTTP ${res.status}`);
+  } catch (e) {
+    setVStatus('error', `接続失敗: ${e.message.slice(0, 30)}`);
+  }
+})();

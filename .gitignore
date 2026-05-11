@@ -24,3 +24,8 @@ Thumbs.db
 # Packed extension
 *.zip
 *.crx
+
+# Viewer (separate sub-project)
+viewer/data/
+viewer/server/target/
+viewer/server/static/

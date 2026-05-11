@@ -26,7 +26,32 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       .catch(err => sendResponse({ ok: false, error: err.message }));
     return true;
   }
+  if (message.type === 'POST_TO_VIEWER') {
+    postToViewer(message.url, message.apiKey, message.payload)
+      .then(result => sendResponse({ ok: true, result }))
+      .catch(err => sendResponse({ ok: false, error: err.message }));
+    return true;
+  }
 });
+
+async function postToViewer(baseUrl, apiKey, payload) {
+  if (!baseUrl || !apiKey) throw new Error('viewer URL or API key not set');
+  const url = `${baseUrl.replace(/\/+$/, '')}/api/analyses`;
+  const response = await fetch(url, {
+    method: 'POST',
+    credentials: 'omit',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`HTTP ${response.status}${text ? ': ' + text.slice(0, 200) : ''}`);
+  }
+  return await response.json();
+}
 
 async function fetchPdf(originalUrl) {
   const url = normalizeUrl(originalUrl);
