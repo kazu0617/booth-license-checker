@@ -58,6 +58,9 @@ pub async fn list(
     } else {
         format!("WHERE {}", where_parts.join(" AND "))
     };
+    // latest_* と analysis_count は SELECT 句の相関サブクエリで取る。
+    // idx_analyses_product (product_id, analyzed_at DESC) でカバーされており、
+    // products LIMIT 後の N×O(log M) で済むため、CTE/window function 化より速い。
     let compliance_having = match compliance_filter {
         Some(v) => format!("HAVING latest_is_compliant = {}", v),
         None => String::new(),

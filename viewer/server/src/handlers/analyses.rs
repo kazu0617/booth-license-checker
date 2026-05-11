@@ -98,8 +98,62 @@ pub async fn store_analysis(
     source: &str,
 ) -> anyhow::Result<AnalysisStoreResult> {
     let now = now_iso();
+    let is_compliant = input
+        .is_compliant
+        .unwrap_or_else(|| fallback_compliance(&input));
+    let conditions_json = canonical_conditions_json(&input.conditions);
+    let new_text_hash: Option<String> = input
+        .license_text
+        .as_ref()
+        .filter(|s| !s.trim().is_empty())
+        .map(|body| {
+            let mut hasher = Sha256::new();
+            hasher.update(body.as_bytes());
+            hex::encode(hasher.finalize())
+        });
 
-    // ── 1. Upsert product ─────────────────────────────────────
+    // 最頻ケース (extension が同じページを再訪) で WAL 書き込みを完全に回避するため、
+    // tx を始める前に最新 analysis との一致を read-only で確認する。
+    let existing_latest: Option<(i64, i64, Option<String>, String, i64)> = sqlx::query_as(
+        r#"
+        SELECT p.id, a.id, lt.text_sha256, a.conditions_json, a.is_compliant
+        FROM products p
+        JOIN analyses a ON a.id = (
+            SELECT id FROM analyses
+            WHERE product_id = p.id
+            ORDER BY analyzed_at DESC, id DESC
+            LIMIT 1
+        )
+        LEFT JOIN license_texts lt ON lt.id = a.license_text_id
+        WHERE p.product_url = ?
+        "#,
+    )
+    .bind(&input.product.url)
+    .fetch_optional(&state.db)
+    .await?;
+
+    if let Some((p_id, a_id, latest_hash, latest_cond, latest_compliant)) = existing_latest.as_ref()
+    {
+        if *latest_hash == new_text_hash
+            && *latest_cond == conditions_json
+            && *latest_compliant == is_compliant as i64
+        {
+            return Ok(AnalysisStoreResult {
+                stored: false,
+                reason: Some("no_change".into()),
+                product_id: *p_id,
+                analysis_id: *a_id,
+                diff: None,
+            });
+        }
+    }
+
+    let diff = existing_latest
+        .as_ref()
+        .map(|(_, _, _, latest_cond, _)| diff_conditions(latest_cond, &conditions_json));
+
+    let mut tx = state.db.begin().await?;
+
     let product_id: i64 = sqlx::query_scalar(
         r#"
         INSERT INTO products (product_url, product_name, shop_name, first_seen_at, last_seen_at)
@@ -116,90 +170,32 @@ pub async fn store_analysis(
     .bind(&input.product.shop_name)
     .bind(&now)
     .bind(&now)
-    .fetch_one(&state.db)
+    .fetch_one(&mut *tx)
     .await?;
 
-    // ── 2. Upsert license_text (if provided) ──────────────────
-    let license_text_id: Option<i64> = if let Some(body) = input.license_text.as_ref() {
-        if body.trim().is_empty() {
-            None
-        } else {
-            let mut hasher = Sha256::new();
-            hasher.update(body.as_bytes());
-            let hash = hex::encode(hasher.finalize());
-
-            let existing: Option<i64> = sqlx::query_scalar(
-                "SELECT id FROM license_texts WHERE text_sha256 = ?",
-            )
-            .bind(&hash)
-            .fetch_optional(&state.db)
-            .await?;
-
-            if let Some(id) = existing {
-                Some(id)
-            } else {
-                let id: i64 = sqlx::query_scalar(
-                    r#"
-                    INSERT INTO license_texts (text_sha256, body, spec_version, gen_version, created_at)
-                    VALUES (?, ?, ?, ?, ?)
-                    RETURNING id
-                    "#,
-                )
-                .bind(&hash)
-                .bind(body)
-                .bind(&input.spec_version)
-                .bind(&input.gen_version)
-                .bind(&now)
-                .fetch_one(&state.db)
-                .await?;
-                Some(id)
-            }
-        }
+    // SQLite では DO NOTHING + RETURNING が衝突時に行を返さないので、no-op の DO UPDATE で id を取り出す。
+    let license_text_id: Option<i64> = if let Some(hash) = new_text_hash.as_ref() {
+        let body = input.license_text.as_deref().unwrap_or("");
+        let id: i64 = sqlx::query_scalar(
+            r#"
+            INSERT INTO license_texts (text_sha256, body, spec_version, gen_version, created_at)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(text_sha256) DO UPDATE SET text_sha256 = excluded.text_sha256
+            RETURNING id
+            "#,
+        )
+        .bind(hash)
+        .bind(body)
+        .bind(&input.spec_version)
+        .bind(&input.gen_version)
+        .bind(&now)
+        .fetch_one(&mut *tx)
+        .await?;
+        Some(id)
     } else {
         None
     };
 
-    // ── 3. Compute compliance ─────────────────────────────────
-    let is_compliant = input
-        .is_compliant
-        .unwrap_or_else(|| fallback_compliance(&input));
-
-    // ── 4. Compare with latest analysis ───────────────────────
-    let conditions_json = canonical_conditions_json(&input.conditions);
-
-    let latest: Option<(i64, Option<i64>, String, i64)> = sqlx::query_as(
-        r#"
-        SELECT id, license_text_id, conditions_json, is_compliant
-        FROM analyses
-        WHERE product_id = ?
-        ORDER BY analyzed_at DESC, id DESC
-        LIMIT 1
-        "#,
-    )
-    .bind(product_id)
-    .fetch_optional(&state.db)
-    .await?;
-
-    if let Some((latest_id, latest_text_id, latest_cond, latest_compliant)) = &latest {
-        if *latest_text_id == license_text_id
-            && *latest_cond == conditions_json
-            && *latest_compliant == is_compliant as i64
-        {
-            return Ok(AnalysisStoreResult {
-                stored: false,
-                reason: Some("no_change".into()),
-                product_id,
-                analysis_id: *latest_id,
-                diff: None,
-            });
-        }
-    }
-
-    let diff = latest.as_ref().map(|(_, _, latest_cond, _)| {
-        diff_conditions(latest_cond, &conditions_json)
-    });
-
-    // ── 5. Insert new analysis row ────────────────────────────
     let enabled_snap_json = input
         .enabled_conditions_snapshot
         .as_ref()
@@ -231,8 +227,10 @@ pub async fn store_analysis(
     .bind(enabled_snap_json)
     .bind(accepted_snap_json)
     .bind(if is_compliant { 1_i64 } else { 0 })
-    .fetch_one(&state.db)
+    .fetch_one(&mut *tx)
     .await?;
+
+    tx.commit().await?;
 
     Ok(AnalysisStoreResult {
         stored: true,
