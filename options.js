@@ -52,6 +52,89 @@ const btnSave = document.getElementById('btn-save');
 const btnReset = document.getElementById('btn-reset');
 const saveStatus = document.getElementById('save-status');
 
+// ── Viewer 連携 ─────────────────────────────────────────────────────
+const viewerSection      = document.getElementById('viewer-section');
+const toggleViewerEnabled = document.getElementById('toggle-viewer-enabled');
+const inputViewerUrl     = document.getElementById('viewer-url');
+const inputViewerApiKey  = document.getElementById('viewer-api-key');
+const btnViewerTest      = document.getElementById('viewer-btn-test');
+const btnViewerOpen      = document.getElementById('viewer-btn-open');
+const viewerStatusEl     = document.getElementById('viewer-status');
+
+const DEFAULT_VIEWER_URL = 'http://127.0.0.1:38274';
+
+function originForUrl(urlStr) {
+  try {
+    const u = new URL(urlStr);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    if (u.hostname !== '127.0.0.1' && u.hostname !== 'localhost') return null;
+    return `${u.protocol}//${u.hostname}/*`;
+  } catch {
+    return null;
+  }
+}
+
+function setViewerSectionDisabled(disabled) {
+  viewerSection.classList.toggle('viewer-section--disabled', disabled);
+}
+
+function setViewerStatus(text, kind) {
+  viewerStatusEl.textContent = text;
+  viewerStatusEl.className = `viewer-status${kind ? ' viewer-status--' + kind : ''}`;
+}
+
+toggleViewerEnabled.addEventListener('change', async () => {
+  setViewerSectionDisabled(!toggleViewerEnabled.checked);
+  if (toggleViewerEnabled.checked) {
+    const origin = originForUrl(inputViewerUrl.value || DEFAULT_VIEWER_URL);
+    if (origin) {
+      const granted = await chrome.permissions.request({ origins: [origin] });
+      if (!granted) {
+        toggleViewerEnabled.checked = false;
+        setViewerSectionDisabled(true);
+        setViewerStatus('権限が付与されなかったため有効化できませんでした', 'error');
+        return;
+      }
+      setViewerStatus('権限を付与しました。「保存」ボタンで設定を確定してください', 'ok');
+    }
+  } else {
+    setViewerStatus('');
+  }
+});
+
+btnViewerTest.addEventListener('click', async () => {
+  const url = (inputViewerUrl.value || DEFAULT_VIEWER_URL).replace(/\/+$/, '');
+  setViewerStatus('接続中…');
+  try {
+    const origin = originForUrl(url);
+    if (origin) {
+      const granted = await chrome.permissions.request({ origins: [origin] });
+      if (!granted) {
+        setViewerStatus('権限が付与されませんでした', 'error');
+        return;
+      }
+    }
+    const res = await fetch(`${url}/api/health`, { method: 'GET' });
+    if (!res.ok) {
+      setViewerStatus(`エラー: HTTP ${res.status}`, 'error');
+      return;
+    }
+    const data = await res.json();
+    if (data && data.ok) {
+      setViewerStatus(`接続成功 (${data.service} v${data.version})`, 'ok');
+    } else {
+      setViewerStatus('応答は受け取りましたが ok=false でした', 'error');
+    }
+  } catch (e) {
+    setViewerStatus(`接続失敗: ${e.message}`, 'error');
+  }
+});
+
+btnViewerOpen.addEventListener('click', () => {
+  const url = (inputViewerUrl.value || DEFAULT_VIEWER_URL).replace(/\/+$/, '');
+  chrome.tabs.create({ url });
+});
+
 const TYPE_LABEL = {
   'permitted':      '許可',
   'conditional':    '条件付き',
@@ -130,9 +213,29 @@ function setConditionEnabled(optBlock, enabled) {
 
 // ── 設定の読み込み ──────────────────────────────────────────────────
 
-chrome.storage.sync.get({ enabledConditions: [], acceptedChoices: {}, enabled: true, onlyVRChat: true }, data => {
+chrome.storage.sync.get({
+  enabledConditions: [], acceptedChoices: {}, enabled: true, onlyVRChat: true,
+  viewerEnabled: false, viewerUrl: DEFAULT_VIEWER_URL, viewerApiKey: '',
+}, data => {
   toggleEnabled.checked = data.enabled;
   toggleOnlyVRChat.checked = data.onlyVRChat;
+  toggleViewerEnabled.checked = !!data.viewerEnabled;
+  inputViewerUrl.value = data.viewerUrl || DEFAULT_VIEWER_URL;
+  inputViewerApiKey.value = data.viewerApiKey || '';
+  setViewerSectionDisabled(!data.viewerEnabled);
+
+  // viewerEnabled が ON でも localhost 権限が無いと送信が黙って失敗するため、
+  // ページ表示時に検証して状態を表示する
+  if (data.viewerEnabled) {
+    const origin = originForUrl(data.viewerUrl || DEFAULT_VIEWER_URL);
+    if (origin) {
+      chrome.permissions.contains({ origins: [origin] }).then(granted => {
+        if (!granted) {
+          setViewerStatus('⚠ サーバー URL への権限が付与されていません。「接続テスト」を実行して権限を付与してください', 'error');
+        }
+      });
+    }
+  }
 
   const enabled = data.enabledConditions || [];
   const accepted = data.acceptedChoices || {};
@@ -168,7 +271,15 @@ btnSave.addEventListener('click', () => {
     acceptedChoices[id].push(key);
   });
 
-  chrome.storage.sync.set({ enabledConditions, acceptedChoices, enabled: toggleEnabled.checked, onlyVRChat: toggleOnlyVRChat.checked }, () => {
+  chrome.storage.sync.set({
+    enabledConditions,
+    acceptedChoices,
+    enabled: toggleEnabled.checked,
+    onlyVRChat: toggleOnlyVRChat.checked,
+    viewerEnabled: toggleViewerEnabled.checked,
+    viewerUrl: (inputViewerUrl.value || DEFAULT_VIEWER_URL).replace(/\/+$/, ''),
+    viewerApiKey: inputViewerApiKey.value.trim(),
+  }, () => {
     saveStatus.classList.add('visible');
     setTimeout(() => saveStatus.classList.remove('visible'), 4000);
   });

@@ -267,6 +267,91 @@
     }
     .btn--grant:hover { opacity: 0.8; }
     .btn--grant:disabled { opacity: 0.4; cursor: default; }
+
+    /* ── Viewer セクション ── */
+    .viewer-section {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .viewer-section__title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #555;
+      padding: 10px 16px;
+      background: #f5f5f5;
+      border-bottom: 1px solid #e8e8e8;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .viewer-section__body { padding: 14px 16px; }
+    .viewer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .viewer-row:last-child { margin-bottom: 0; }
+    .viewer-row__label { font-weight: 600; font-size: 13px; }
+    .viewer-row__desc  { font-size: 12px; color: #666; margin-top: 2px; }
+    .viewer-input-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .viewer-input-row label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #555;
+    }
+    .viewer-input-row input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #d0d0d0;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .viewer-input-row input:focus {
+      outline: none;
+      border-color: #1a73e8;
+    }
+    .viewer-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .btn--viewer {
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid #1a73e8;
+      background: #e8f0fe;
+      color: #1a73e8;
+      white-space: nowrap;
+      transition: opacity 0.15s;
+    }
+    .btn--viewer:hover { opacity: 0.8; }
+    .btn--viewer:disabled { opacity: 0.4; cursor: default; }
+    .viewer-status {
+      font-size: 12px;
+      color: #555;
+      margin-left: 4px;
+    }
+    .viewer-status--ok    { color: #135200; font-weight: 600; }
+    .viewer-status--error { color: #a8071a; font-weight: 600; }
+    .viewer-section--disabled .viewer-input-row,
+    .viewer-section--disabled .viewer-actions {
+      opacity: 0.45;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
@@ -299,6 +384,35 @@
         <input type="checkbox" id="toggle-only-vrchat" checked>
         <span class="toggle__slider"></span>
       </label>
+    </div>
+
+    <div class="viewer-section" id="viewer-section">
+      <div class="viewer-section__title">Viewer に保存する</div>
+      <div class="viewer-section__body">
+        <div class="viewer-row">
+          <div>
+            <div class="viewer-row__label">解析結果をローカル Viewer に自動保存する</div>
+            <div class="viewer-row__desc">解析が成功した商品ページの結果を自動で Viewer サーバーに送信します</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="toggle-viewer-enabled">
+            <span class="toggle__slider"></span>
+          </label>
+        </div>
+        <div class="viewer-input-row">
+          <label for="viewer-url">サーバー URL</label>
+          <input type="url" id="viewer-url" placeholder="http://127.0.0.1:38274" value="http://127.0.0.1:38274">
+        </div>
+        <div class="viewer-input-row">
+          <label for="viewer-api-key">API キー</label>
+          <input type="password" id="viewer-api-key" placeholder="viewer/data/api-key.txt の内容を貼り付け" autocomplete="off">
+        </div>
+        <div class="viewer-actions">
+          <button class="btn--viewer" id="viewer-btn-test">接続テスト</button>
+          <button class="btn--viewer" id="viewer-btn-open">Viewer を開く</button>
+          <span class="viewer-status" id="viewer-status"></span>
+        </div>
+      </div>
     </div>
 
     <div class="perm-section">

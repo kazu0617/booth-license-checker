@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ──────────────────────────────────────────────────────────
+   Theme tokens — Dark (default) and Light
+   Inspired by tasteful, low-saturation editor palettes.
+   No purple/blue gradients (per user's design guidelines).
+   ────────────────────────────────────────────────────────── */
+
+:root,
+.light {
+  --bg:           #fafafa;
+  --bg-elevated: #ffffff;
+  --bg-subtle:   #f4f4f5;
+  --bg-hover:    #ececec;
+
+  --fg:          #1a1a1a;
+  --fg-muted:    #6b6b6b;
+  --fg-faint:    #9b9b9b;
+
+  --border:      #e2e2e2;
+  --border-strong: #c8c8c8;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.dark {
+  --bg:           #18181a;
+  --bg-elevated: #1f1f22;
+  --bg-subtle:   #232327;
+  --bg-hover:    #2c2c31;
+
+  --fg:          #ececec;
+  --fg-muted:    #a0a0a8;
+  --fg-faint:    #6e6e76;
+
+  --border:      #2e2e34;
+  --border-strong: #404048;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+@layer base {
+  html, body, #root {
+    @apply h-full;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: theme('fontFamily.sans');
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  *::selection {
+    background: rgba(92, 159, 212, 0.25);
+  }
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+@layer components {
+  .surface {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow-sm);
+  }
+  .surface-subtle {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .text-muted   { color: var(--fg-muted); }
+  .text-faint   { color: var(--fg-faint); }
+  .border-soft  { border-color: var(--border); }
+
+  .focus-ring {
+    @apply outline-none ring-1 ring-transparent;
+    transition: box-shadow 0.12s, border-color 0.12s;
+  }
+  .focus-ring:focus-visible {
+    box-shadow: 0 0 0 3px rgba(92, 159, 212, 0.18);
+    border-color: rgba(92, 159, 212, 0.6);
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--fg-faint);
+}
+::-webkit-scrollbar-track { background: transparent; }

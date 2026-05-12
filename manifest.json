@@ -13,10 +13,13 @@
     "https://drive.usercontent.google.com/*",
     "https://docs.google.com/*",
     "https://www.dropbox.com/*",
-    "https://dl.dropboxusercontent.com/*"
+    "https://dl.dropboxusercontent.com/*",
+    "http://127.0.0.1/*",
+    "http://localhost/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
   },
   "action": {
     "default_popup": "popup.html",
@@ -53,5 +56,11 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{3cb1195e-5511-4be1-b6fa-f0287ba77e87}",
+      "strict_min_version": "128.0"
+    }
   }
 }

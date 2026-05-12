@@ -1,0 +1,17 @@
+{
+  "name": "booth-license-viewer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BOOTH License Checker の解析結果を保存・閲覧するローカルサーバー + Web UI",
+  "scripts": {
+    "start": "cd server && cargo run --release",
+    "dev": "concurrently --names 'rust,vite' --prefix-colors 'magenta,cyan' --kill-others-on-fail \"cd server && cargo run\" \"cd web && npm run dev\"",
+    "build": "npm run build:web && npm run build:server",
+    "build:web": "cd web && npm install && npm run build",
+    "build:server": "cd server && cargo build --release",
+    "test": "cd server && cargo test"
+  },
+  "devDependencies": {
+    "concurrently": "9.1.2"
+  }
+}

@@ -21,6 +21,9 @@
     acceptedChoices: {},
     enabled: true,
     onlyVRChat: true,
+    viewerEnabled: false,
+    viewerUrl: 'http://127.0.0.1:38274',
+    viewerApiKey: '',
   });
 
   if (!settings.enabled) return;
@@ -50,6 +53,7 @@
 
   let parseResult = null;
   let usedUrl = null;
+  let usedText = null;
   let pdfIsImageBased = false;
   let lastError = null;
 
@@ -72,6 +76,7 @@
           bestMatchCount = matchCount;
           parseResult = candidate;
           usedUrl = url;
+          usedText = text;
           if (matchCount === VN3_OPTIONS.length) break;
         }
       } else {
@@ -88,6 +93,13 @@
   // アクセスエラー（host_permissions 外など）に関わらず解析結果を優先して表示する
   if (parseResult) {
     showBanner({ status: 'done', parseResult: parseResult.conditions, specialNotes: parseResult.specialNotes, isGeneratorDoc: parseResult.isGeneratorDoc, enabledConditions: settings.enabledConditions, acceptedChoices: settings.acceptedChoices, pdfUrl: usedUrl, links: licenseLinks });
+    sendToViewer({
+      parseResult,
+      usedUrl,
+      usedText,
+      enabledConditions: settings.enabledConditions,
+      acceptedChoices: settings.acceptedChoices,
+    });
     return;
   }
 
@@ -444,6 +456,7 @@
       const permissionHint = permissionMissing
         ? `<p>Google Drive や Dropbox へのアクセス許可が有効になっていない可能性があります。<button class="vn3-link-btn" id="vn3-open-options">オプションページ</button>から許可を有効にすると自動取得できる場合があります。</p>`
         : '';
+      const manualBtnHtml = buildManualRegisterButtonHtml(links);
       banner.innerHTML = `
         <div class="vn3-banner__header">
           <span class="vn3-banner__icon">⚠️</span>
@@ -453,6 +466,7 @@
         <div class="vn3-banner__body">
           <p>ライセンス文書の内容を手動でご確認ください。</p>
           ${permissionHint}
+          ${manualBtnHtml}
         </div>
       `;
       if (permissionMissing) {
@@ -460,11 +474,13 @@
           chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS' });
         });
       }
+      attachManualRegisterHandler(banner, links[0] || null);
     } else if (status === 'image_pdf') {
       banner.className = 'vn3-banner vn3-banner--warn';
       const pdfLinkHtml = pdfUrl
         ? `<a class="vn3-link" href="${escapeHtml(pdfUrl)}" target="_blank" rel="noopener">ライセンス文書を開く ↗</a>`
         : '';
+      const manualBtnHtml = buildManualRegisterButtonHtml(links);
       banner.innerHTML = `
         <div class="vn3-banner__header">
           <span class="vn3-banner__icon">⚠️</span>
@@ -473,8 +489,10 @@
         </div>
         <div class="vn3-banner__body">
           <p>このライセンス文書はテキストを含まない画像形式の PDF です。内容を手動でご確認ください。${pdfLinkHtml ? ' ' + pdfLinkHtml : ''}</p>
+          ${manualBtnHtml}
         </div>
       `;
+      attachManualRegisterHandler(banner, pdfUrl || links[0] || null);
     } else if (status === 'done') {
       const checkedIds = VN3_OPTIONS.map(o => o.id)
         .filter(id => enabledConditions.includes(id));
@@ -581,6 +599,125 @@
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  // ════════════════════════════════════════════════════════════════════
+  // Viewer (ローカルサーバー) への自動送信
+  // ════════════════════════════════════════════════════════════════════
+
+  function extractProductMeta() {
+    const main = document.querySelector('main[role="main"]');
+    if (!main) return { name: null, shop_name: null };
+    const article = main.querySelector('article') || main;
+    const nameEl = article.querySelector('header h2');
+    const name = nameEl ? nameEl.innerText.trim() : null;
+
+    // ショップ名の候補は「https://{shop}.booth.pm/」(ルート、パスなし) のリンクで、
+    // かつ innerText が非空のもの。pixiv/booth.pm/users 等は除外する。
+    // 同じ条件のアンカーが複数あっても (画像リンク + テキストリンク など)、
+    // テキストありの最初のものを採用する。
+    let shop = null;
+    const SHOP_ROOT_RE = /^https?:\/\/([^./]+)\.booth\.pm\/$/;
+    const candidates = article.querySelectorAll('a[href*=".booth.pm/"]');
+    const fallbackCandidates = candidates.length === 0
+      ? document.querySelectorAll('main a[href*=".booth.pm/"]')
+      : candidates;
+    for (const a of fallbackCandidates) {
+      const m = a.href.match(SHOP_ROOT_RE);
+      if (!m || m[1] === 'www' || m[1] === 'booth') continue;
+      const txt = a.innerText.trim();
+      if (txt) { shop = txt; break; }
+    }
+    if (!shop) {
+      try {
+        const u = new URL(location.href);
+        const m = u.hostname.match(/^([^.]+)\.booth\.pm$/);
+        if (m && m[1] !== 'www' && m[1] !== 'booth') shop = m[1];
+      } catch { /* noop */ }
+    }
+    return { name, shop_name: shop };
+  }
+
+  function computeIsCompliant(parseConditions, enabledConditions, acceptedChoices) {
+    const checkedIds = VN3_OPTIONS.map(o => o.id).filter(id => enabledConditions.includes(id));
+    if (checkedIds.length === 0) return true;
+    return checkedIds.every(id => {
+      const idx = parseConditions.get(id);
+      if (idx === undefined || idx === -1) return false;
+      const option = VN3_OPTIONS.find(o => o.id === id);
+      const matchText = option?.choices[idx]?.matchText;
+      const accepted = acceptedChoices[id] ?? [];
+      return matchText && accepted.includes(matchText);
+    });
+  }
+
+  function sendToViewer({ parseResult, usedUrl, usedText, enabledConditions, acceptedChoices }) {
+    if (!settings.viewerEnabled || !settings.viewerUrl || !settings.viewerApiKey) return;
+    const meta = extractProductMeta();
+    const conditionsObj = {};
+    for (const [k, v] of parseResult.conditions) conditionsObj[k] = v;
+
+    const payload = {
+      product: {
+        url: location.href,
+        name: meta.name,
+        shop_name: meta.shop_name,
+      },
+      source: 'extension',
+      license_url: usedUrl,
+      license_text: usedText,
+      spec_version: parseResult.specVersion,
+      gen_version: parseResult.genVersion,
+      is_generator_doc: parseResult.isGeneratorDoc,
+      conditions: conditionsObj,
+      special_notes: parseResult.specialNotes,
+      enabled_conditions_snapshot: Array.isArray(enabledConditions) ? enabledConditions : [],
+      accepted_choices_snapshot: acceptedChoices || {},
+      is_compliant: computeIsCompliant(parseResult.conditions, enabledConditions || [], acceptedChoices || {}),
+    };
+
+    chrome.runtime.sendMessage(
+      {
+        type: 'POST_TO_VIEWER',
+        url: settings.viewerUrl,
+        apiKey: settings.viewerApiKey,
+        payload,
+      },
+      response => {
+        if (chrome.runtime.lastError) {
+          console.warn('[BOOTH License Checker] viewer send failed:', chrome.runtime.lastError.message);
+          return;
+        }
+        if (!response || !response.ok) {
+          console.warn('[BOOTH License Checker] viewer rejected:', response?.error);
+        }
+      }
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════════
+  // Viewer 手動登録ページへのジャンプ（fetch 失敗時の救済導線）
+  // ════════════════════════════════════════════════════════════════════
+
+  function buildManualRegisterButtonHtml(licenseLinks) {
+    if (!settings.viewerEnabled || !settings.viewerUrl) return '';
+    return `<p><button class="vn3-link-btn" id="vn3-manual-register">Viewer に手動登録</button>商品情報・ライセンス URL を引き継いだ状態で手動登録ページを開きます。</p>`;
+  }
+
+  function attachManualRegisterHandler(banner, licenseUrlHint) {
+    const btn = banner.querySelector('#vn3-manual-register');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const meta = extractProductMeta();
+      const params = new URLSearchParams();
+      params.set('product_url', location.href);
+      if (meta.name) params.set('product_name', meta.name);
+      if (meta.shop_name) params.set('shop_name', meta.shop_name);
+      if (licenseUrlHint) params.set('license_url', licenseUrlHint);
+      const base = settings.viewerUrl.replace(/\/+$/, '');
+      const url = `${base}/manual?${params.toString()}`;
+      window.open(url, '_blank', 'noopener');
+    });
   }
 
   function shortenUrl(url) {

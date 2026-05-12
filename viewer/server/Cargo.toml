@@ -1,0 +1,31 @@
+[package]
+name = "booth-license-viewer"
+version = "0.1.0"
+edition = "2021"
+description = "Local server that stores VN3 license analyses sent from the BOOTH License Checker browser extension"
+license = "MIT"
+publish = false
+
+[dependencies]
+axum = "0.8.4"
+tokio = { version = "1.42.0", features = ["macros", "rt-multi-thread", "signal", "fs"] }
+sqlx = { version = "0.8.3", default-features = false, features = ["runtime-tokio", "sqlite", "macros", "migrate", "chrono"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+tower = "0.5.2"
+tower-http = { version = "0.6.6", features = ["cors", "trace", "fs"] }
+chrono = { version = "0.4.41", features = ["serde"] }
+uuid = { version = "1.18.0", features = ["v4"] }
+clap = { version = "4.5.51", features = ["derive", "env"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
+sha2 = "0.10.9"
+hex = "0.4.3"
+thiserror = "2.0.16"
+anyhow = "1.0.99"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
